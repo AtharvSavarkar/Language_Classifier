@@ -1,2 +1,156 @@
-# Language_Classifier
-Repo for language classifier
+🇮🇳 Indic Language Classifier (23 Languages)
+
+A high-throughput, production-grade language identification system for Indian languages, built by fine-tuning IndicBERT v2.
+
+This repository provides:
+
+✅ A 23-class language classifier (English + 22 Indian languages)
+
+✅ A distributed, streaming inference pipeline for very large JSONL datasets
+
+✅ No RAM blowups — reads data using file offsets
+
+✅ Supports single-GPU and multi-GPU (DDP) inference
+
+✅ Outputs language-wise sharded JSONL files
+
+🔤 Supported Languages (23)
+{
+  "assamese": 0,
+  "bengali": 1,
+  "bodo": 2,
+  "dogri": 3,
+  "english": 4,
+  "gujarati": 5,
+  "hindi": 6,
+  "kannada": 7,
+  "kashmiri": 8,
+  "kokani": 9,
+  "maithili": 10,
+  "malayalam": 11,
+  "manipuri": 12,
+  "marathi": 13,
+  "nepali": 14,
+  "oriya": 15,
+  "punjabi": 16,
+  "sanskrit": 17,
+  "santali": 18,
+  "sindhi": 19,
+  "tamil": 20,
+  "telugu": 21,
+  "urdu": 22
+}
+
+🧠 Model Details
+
+Base Model: ai4bharat/IndicBERTv2-MLM-only
+
+Architecture: Transformer Encoder + Classification Head
+
+Task: Multiclass Language Identification (23-way)
+
+Input: Raw text
+
+Output: Language label + ID
+
+📂 Input Format
+
+The input directory should contain one or more .jsonl files.
+
+Each line must be a JSON object containing a consistent text key (default: "text"):
+
+{"text": "यह एक उदाहरण वाक्य है"}
+{"text": "This is an English sentence"}
+{"text": "இது ஒரு தமிழ் வாக்கியம்"}
+
+📤 Output Format
+
+The script writes language-wise JSONL shards:
+
+output_dir/
+ ├── hindi.rank0.jsonl
+ ├── english.rank0.jsonl
+ ├── tamil.rank1.jsonl
+ ├── ...
+
+
+Each output line contains the original JSON plus predictions:
+
+{
+  "text": "यह एक उदाहरण वाक्य है",
+  "predicted_id": 6,
+  "predicted_label": "hindi"
+}
+
+🚀 Installation
+pip install torch transformers tqdm
+
+▶️ Inference Usage
+🔹 Single GPU / CPU
+python classify.py \
+  --model_path /path/to/model \
+  --tokenizer_path /path/to/model \
+  --input_dir /data/jsonl_inputs \
+  --output_dir /data/lang_outputs \
+  --label_map label_to_id.json \
+  --batch_size 256
+
+🔹 Multi-GPU (DDP)
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 classify.py \
+  --model_path /path/to/model \
+  --tokenizer_path /path/to/model \
+  --input_dir /data/jsonl_inputs \
+  --output_dir /data/lang_outputs \
+  --label_map label_to_id.json \
+  --batch_size 256
+
+
+Each GPU writes its own shard files which can be merged later.
+
+⚙️ All Arguments
+Argument	Description	Default
+--model_path	Path to model	required
+--tokenizer_path	Path to tokenizer	required
+--input_dir	Folder with jsonl files	required
+--output_dir	Output folder	required
+--label_map	JSON mapping label → id	required
+--batch_size	Batch size per GPU	256
+--max_length	Max token length	512
+--num_workers	DataLoader workers	64
+--text_key	JSON key for text	"text"
+🏗️ Why This Scales
+
+✔ Uses byte-offset indexing (no full file loading)
+
+✔ Can handle 100M+ lines
+
+✔ Supports multi-GPU and multi-node
+
+✔ Writes streaming outputs
+
+✔ Safe for very large datasets
+
+🧹 Merging Shards
+cat hindi.rank*.jsonl > hindi.jsonl
+
+📌 Use Cases
+
+Large-scale data filtering
+
+Language-wise dataset splitting
+
+Multilingual corpus analysis
+
+Pretraining data cleaning
+
+Crawl classification
+
+⚠️ Notes
+
+This is a language classifier, not a quality classifier.
+
+For mixed-language text, the model predicts the dominant language.
+
+📜 Acknowledgements
+
+Base model: IndicBERT v2 by AI4Bharat
